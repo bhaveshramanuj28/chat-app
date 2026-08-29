@@ -2,27 +2,24 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp v3.5</title>
+<title>WhatsApp v4</title>
 
 <style>
-body { margin:0; font-family:Arial; background:#0f0f0f; color:white; }
+body { margin:0; font-family:Arial; background:#0b0b0b; color:white; }
 
 #chat { display:none; padding:10px; }
 
 .msg {
-  background:#222;
-  margin:5px;
   padding:8px;
-  border-radius:8px;
-}
-
-.me { background:#075e54; }
-
-#preview img {
-  max-width:200px;
+  margin:5px;
   border-radius:10px;
-  margin:5px 0;
+  max-width:70%;
 }
+
+.me { background:#075e54; margin-left:auto; }
+.other { background:#222; }
+
+img { max-width:200px; border-radius:10px; }
 
 input, button { width:100%; padding:10px; margin:5px 0; }
 </style>
@@ -31,7 +28,7 @@ input, button { width:100%; padding:10px; margin:5px 0; }
 <body>
 
 <div id="login">
-  <h2>WhatsApp v3.5</h2>
+  <h2>WhatsApp v4</h2>
 
   <input id="name" placeholder="Name">
   <input id="room" placeholder="Room">
@@ -45,15 +42,13 @@ input, button { width:100%; padding:10px; margin:5px 0; }
 
   <div id="messages"></div>
 
-  <div id="preview"></div>
-
   <input id="msg">
   <button onclick="send()">Send</button>
 
   <input type="file" id="file">
-  <button onclick="sendFile()">Send File</button>
+  <button onclick="sendFile()">Send File / Voice</button>
 
-  <button onclick="startCall()">📞 Call</button>
+  <button onclick="call()">📞 Call</button>
 
   <video id="local" autoplay muted></video>
   <video id="remote" autoplay></video>
