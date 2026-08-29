@@ -5,66 +5,58 @@ const io = require("socket.io")(http);
 
 app.use(express.static("public"));
 
+let users = {};
 let rooms = {};
-
-function makeRoom() {
-  return Math.random().toString(36).substring(2, 8);
-}
 
 io.on("connection", (socket) => {
 
-  // CREATE ROOM
-  socket.on("createRoom", (password, cb) => {
-    const roomId = makeRoom();
-
-    rooms[roomId] = {
-      password,
-      users: []
-    };
-
-    cb({ roomId });
-  });
-
   // JOIN ROOM
-  socket.on("join", ({ room, password, user }) => {
+  socket.on("join", ({ name, room }) => {
 
-    if (!rooms[room]) {
-      socket.emit("invalidRoom");
-      return;
-    }
-
-    if (rooms[room].password !== password) {
-      socket.emit("wrongPassword");
-      return;
-    }
-
-    if (rooms[room].users.length >= 2) {
-      socket.emit("full");
-      return;
-    }
-
+    socket.name = name;
     socket.room = room;
-    socket.user = user;
 
-    rooms[room].users.push(socket.id);
+    if (!rooms[room]) rooms[room] = [];
+
+    rooms[room].push(socket.id);
+    users[socket.id] = name;
+
     socket.join(room);
 
-    // 👇 important: initiator decide
-    const initiator = rooms[room].users[0] === socket.id;
-
-    io.to(room).emit("start", { initiator });
+    io.to(room).emit("online", rooms[room].map(id => users[id]));
   });
 
-  // SIGNALING
-  socket.on("offer", d => socket.to(d.room).emit("offer", d.offer));
-  socket.on("answer", d => socket.to(d.room).emit("answer", d.answer));
-  socket.on("ice", d => socket.to(d.room).emit("ice", d.candidate));
+  // MESSAGE
+  socket.on("msg", ({ room, msg }) => {
+    io.to(room).emit("msg", {
+      name: socket.name,
+      msg
+    });
+  });
 
-  // DISCONNECT CLEANUP
+  // FILE
+  socket.on("file", ({ room, file }) => {
+    io.to(room).emit("file", {
+      name: socket.name,
+      file
+    });
+  });
+
+  // TYPING
+  socket.on("typing", (room) => {
+    socket.to(room).emit("typing", socket.name);
+  });
+
+  // DISCONNECT
   socket.on("disconnect", () => {
+
     for (let r in rooms) {
-      rooms[r].users = rooms[r].users.filter(id => id !== socket.id);
+      rooms[r] = rooms[r].filter(id => id !== socket.id);
+
+      io.to(r).emit("online", rooms[r].map(id => users[id]));
     }
+
+    delete users[socket.id];
   });
 
 });
