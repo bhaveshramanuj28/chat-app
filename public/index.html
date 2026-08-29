@@ -2,35 +2,37 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini WhatsApp Clone</title>
+<title>WhatsApp Clone</title>
 
 <style>
-body { font-family: Arial; background:#111; color:white; margin:0; padding:10px; }
-#chat { display:none; }
+body { margin:0; font-family:Arial; background:#111; color:white; }
+#chat { display:none; padding:10px; }
+.msg { background:#222; margin:5px; padding:8px; border-radius:5px; }
 input, button { width:100%; padding:10px; margin:5px 0; }
-.msg { background:#222; padding:8px; margin:5px; border-radius:5px; }
 </style>
 
 </head>
 <body>
 
 <div id="login">
-  <h2>Join Chat</h2>
-
-  <input id="user" placeholder="Name">
+  <h2>WhatsApp Clone</h2>
+  <input id="name" placeholder="Name">
   <input id="room" placeholder="Room">
-  <input id="password" placeholder="Password">
-
-  <button onclick="createRoom()">Create Room</button>
   <button onclick="join()">Join</button>
 </div>
 
 <div id="chat">
 
+  <div id="online"></div>
+  <div id="typing"></div>
+
   <div id="messages"></div>
 
   <input id="msg">
   <button onclick="send()">Send</button>
+
+  <input type="file" id="file">
+  <button onclick="sendFile()">Send File</button>
 
 </div>
 
