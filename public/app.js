@@ -1,41 +1,63 @@
 const socket = io();
 
+let room;
+let user;
 let pc;
 let channel;
-let room;
-let channelReady = false;
+let ready = false;
+
+// AUTO ROOM FROM LINK
+window.onload = () => {
+  const r = new URLSearchParams(location.search).get("room");
+  if (r) document.getElementById("room").value = r;
+};
+
+// CREATE ROOM
+function createRoom() {
+  let pass = document.getElementById("password").value;
+
+  socket.emit("createRoom", pass, ({ roomId }) => {
+    const link = `${location.origin}?room=${roomId}`;
+    prompt("Invite Link", link);
+  });
+}
 
 // JOIN
 function join() {
-
   room = document.getElementById("room").value;
-  let password = document.getElementById("password").value;
+  let pass = document.getElementById("password").value;
+  user = document.getElementById("user").value;
 
-  socket.emit("join", { room, password });
-
-  document.getElementById("login").style.display = "none";
-  document.getElementById("chat").style.display = "block";
+  socket.emit("join", { room, password: pass, user });
 }
 
-// CREATE PEER
-function createPeer() {
+// SHOW CHAT ONLY WHEN READY
+socket.on("ready", () => {
+  document.getElementById("login").style.display = "none";
+  document.getElementById("chat").style.display = "block";
+  initPeer();
+});
+
+// PEER INIT
+function initPeer() {
 
   pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
 
   pc.onicecandidate = e => {
-    if (e.candidate) {
+    if (e.candidate)
       socket.emit("ice", { room, candidate: e.candidate });
-    }
+  };
+
+  pc.ontrack = e => {
+    document.getElementById("remote").srcObject = e.streams[0];
   };
 
   pc.ondatachannel = (e) => {
     channel = e.channel;
 
-    channel.onopen = () => {
-      channelReady = true;
-    };
+    channel.onopen = () => ready = true;
 
     channel.onmessage = (e) => {
       add("Friend: " + e.data);
@@ -43,20 +65,16 @@ function createPeer() {
   };
 }
 
-// START (USER A)
-socket.on("start", async () => {
+// OFFER
+socket.on("ready", async () => {
 
-  createPeer();
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
 
   channel = pc.createDataChannel("chat");
 
-  channel.onopen = () => {
-    channelReady = true;
-  };
-
-  channel.onmessage = (e) => {
-    add("Friend: " + e.data);
-  };
+  channel.onopen = () => ready = true;
 
   let offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
@@ -64,40 +82,37 @@ socket.on("start", async () => {
   socket.emit("offer", { room, offer });
 });
 
-// OFFER (USER B)
+// OFFER/ANSWER
 socket.on("offer", async (offer) => {
 
-  createPeer();
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
+  pc.ondatachannel = (e) => {
+    channel = e.channel;
+    channel.onopen = () => ready = true;
+    channel.onmessage = (e) => add("Friend: " + e.data);
+  };
 
   await pc.setRemoteDescription(offer);
 
-  let answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
+  let ans = await pc.createAnswer();
+  await pc.setLocalDescription(ans);
 
-  socket.emit("answer", { room, answer });
+  socket.emit("answer", { room, answer: ans });
 });
 
-// ANSWER
-socket.on("answer", async (answer) => {
-  await pc.setRemoteDescription(answer);
-});
+socket.on("answer", ans => pc.setRemoteDescription(ans));
 
-// ICE
-socket.on("ice", async (c) => {
-  try {
-    await pc.addIceCandidate(c);
-  } catch {}
-});
+socket.on("ice", c => pc.addIceCandidate(c));
 
-// SEND MESSAGE (🔥 MAIN FIX)
+// SEND MSG
 function send() {
 
   let msg = document.getElementById("msg").value;
 
-  if (!channel || channel.readyState !== "open") {
-    alert("Connection not ready");
-    return;
-  }
+  if (!channel || !ready) return alert("Not connected");
 
   channel.send(msg);
   add("Me: " + msg);
@@ -105,9 +120,28 @@ function send() {
   document.getElementById("msg").value = "";
 }
 
+// FILE
+function sendFile() {
+  let f = document.getElementById("file").files[0];
+
+  let r = new FileReader();
+  r.onload = () => channel.send(r.result);
+  r.readAsDataURL(f);
+}
+
 // UI
-function add(msg) {
+function add(m) {
   let div = document.createElement("div");
-  div.innerText = msg;
+  div.className = "msg";
+  div.innerText = m;
   document.getElementById("messages").appendChild(div);
+}
+
+// CALL
+async function startCall() {
+  let stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+  document.getElementById("local").srcObject = stream;
+
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
 }
