@@ -5,37 +5,58 @@ const io = require("socket.io")(http);
 
 app.use(express.static("public"));
 
-let rooms = {};
+// Rooms with password
+let rooms = {
+  "room1": { password: "1234", users: [] },
+  "room2": { password: "abcd", users: [] }
+};
 
 io.on("connection", (socket) => {
 
-  socket.on("join", (room) => {
-    socket.join(room);
+  socket.on("join", ({ room, password }) => {
 
-    if (!rooms[room]) rooms[room] = [];
+    if (!rooms[room]) {
+      socket.emit("invalidRoom");
+      return;
+    }
 
-    // LIMIT 2 USERS
-    if (rooms[room].length >= 2) {
+    if (rooms[room].password !== password) {
+      socket.emit("wrongPassword");
+      return;
+    }
+
+    if (rooms[room].users.length >= 2) {
       socket.emit("full");
       return;
     }
 
-    rooms[room].push(socket.id);
+    rooms[room].users.push(socket.id);
+    socket.join(room);
 
-    if (rooms[room].length === 2) {
-      io.to(rooms[room][0]).emit("start");
+    if (rooms[room].users.length === 2) {
+      io.to(room).emit("start");
     }
   });
 
-  socket.on("offer", data => socket.to(data.room).emit("offer", data.offer));
-  socket.on("answer", data => socket.to(data.room).emit("answer", data.answer));
-  socket.on("ice", data => socket.to(data.room).emit("ice", data.candidate));
+  socket.on("offer", data =>
+    socket.to(data.room).emit("offer", data.offer)
+  );
 
-  socket.on("typing", room => socket.to(room).emit("typing"));
+  socket.on("answer", data =>
+    socket.to(data.room).emit("answer", data.answer)
+  );
+
+  socket.on("ice", data =>
+    socket.to(data.room).emit("ice", data.candidate)
+  );
+
+  socket.on("typing", room =>
+    socket.to(room).emit("typing")
+  );
 
   socket.on("disconnect", () => {
     for (let r in rooms) {
-      rooms[r] = rooms[r].filter(id => id !== socket.id);
+      rooms[r].users = rooms[r].users.filter(id => id !== socket.id);
     }
   });
 
