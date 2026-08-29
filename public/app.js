@@ -6,39 +6,32 @@ let pc;
 let channel;
 let ready = false;
 
-// AUTO ROOM FROM LINK
-window.onload = () => {
-  const r = new URLSearchParams(location.search).get("room");
-  if (r) document.getElementById("room").value = r;
-};
-
 // CREATE ROOM
 function createRoom() {
   let pass = document.getElementById("password").value;
 
   socket.emit("createRoom", pass, ({ roomId }) => {
     const link = `${location.origin}?room=${roomId}`;
-    prompt("Invite Link", link);
+    prompt("Invite Link:", link);
   });
 }
+
+// AUTO FILL ROOM FROM LINK
+window.onload = () => {
+  const r = new URLSearchParams(location.search).get("room");
+  if (r) document.getElementById("room").value = r;
+};
 
 // JOIN
 function join() {
   room = document.getElementById("room").value;
-  let pass = document.getElementById("password").value;
+  let password = document.getElementById("password").value;
   user = document.getElementById("user").value;
 
-  socket.emit("join", { room, password: pass, user });
+  socket.emit("join", { room, password, user });
 }
 
-// SHOW CHAT ONLY WHEN READY
-socket.on("ready", () => {
-  document.getElementById("login").style.display = "none";
-  document.getElementById("chat").style.display = "block";
-  initPeer();
-});
-
-// PEER INIT
+// INIT PEER
 function initPeer() {
 
   pc = new RTCPeerConnection({
@@ -46,12 +39,9 @@ function initPeer() {
   });
 
   pc.onicecandidate = e => {
-    if (e.candidate)
+    if (e.candidate) {
       socket.emit("ice", { room, candidate: e.candidate });
-  };
-
-  pc.ontrack = e => {
-    document.getElementById("remote").srcObject = e.streams[0];
+    }
   };
 
   pc.ondatachannel = (e) => {
@@ -65,54 +55,53 @@ function initPeer() {
   };
 }
 
-// OFFER
-socket.on("ready", async () => {
+// START EVENT
+socket.on("start", async ({ initiator }) => {
 
-  pc = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-  });
+  initPeer();
 
-  channel = pc.createDataChannel("chat");
+  if (initiator) {
 
-  channel.onopen = () => ready = true;
+    channel = pc.createDataChannel("chat");
 
-  let offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
+    channel.onopen = () => ready = true;
 
-  socket.emit("offer", { room, offer });
+    let offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    socket.emit("offer", { room, offer });
+  }
+
 });
 
-// OFFER/ANSWER
+// OFFER
 socket.on("offer", async (offer) => {
 
-  pc = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-  });
-
-  pc.ondatachannel = (e) => {
-    channel = e.channel;
-    channel.onopen = () => ready = true;
-    channel.onmessage = (e) => add("Friend: " + e.data);
-  };
+  initPeer();
 
   await pc.setRemoteDescription(offer);
 
-  let ans = await pc.createAnswer();
-  await pc.setLocalDescription(ans);
+  let answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
 
-  socket.emit("answer", { room, answer: ans });
+  socket.emit("answer", { room, answer });
 });
 
+// ANSWER
 socket.on("answer", ans => pc.setRemoteDescription(ans));
 
+// ICE
 socket.on("ice", c => pc.addIceCandidate(c));
 
-// SEND MSG
+// SEND MESSAGE
 function send() {
 
   let msg = document.getElementById("msg").value;
 
-  if (!channel || !ready) return alert("Not connected");
+  if (!channel || !ready) {
+    alert("Not connected yet");
+    return;
+  }
 
   channel.send(msg);
   add("Me: " + msg);
@@ -120,28 +109,10 @@ function send() {
   document.getElementById("msg").value = "";
 }
 
-// FILE
-function sendFile() {
-  let f = document.getElementById("file").files[0];
-
-  let r = new FileReader();
-  r.onload = () => channel.send(r.result);
-  r.readAsDataURL(f);
-}
-
 // UI
-function add(m) {
+function add(msg) {
   let div = document.createElement("div");
   div.className = "msg";
-  div.innerText = m;
+  div.innerText = msg;
   document.getElementById("messages").appendChild(div);
-}
-
-// CALL
-async function startCall() {
-  let stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-
-  document.getElementById("local").srcObject = stream;
-
-  stream.getTracks().forEach(t => pc.addTrack(t, stream));
 }
