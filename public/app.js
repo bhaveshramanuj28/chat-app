@@ -3,21 +3,25 @@ const socket = io();
 let room;
 let user;
 
-// SIMPLE "ENCRYPTION" (basic demo XOR)
-function encrypt(text) {
-  return btoa(text); // simple encoding (demo)
-}
+// AUTO JOIN FROM LINK (🔥 IMPORTANT FIX)
+window.onload = () => {
+  const params = new URLSearchParams(window.location.search);
+  const roomFromUrl = params.get("room");
 
-function decrypt(text) {
-  return atob(text);
-}
+  if (roomFromUrl) {
+    document.getElementById("room").value = roomFromUrl;
+  }
+};
 
-// CREATE ROOM
+// CREATE ROOM + INVITE LINK
 function createRoom() {
   let pass = document.getElementById("password").value;
 
   socket.emit("createRoom", pass, ({ roomId }) => {
-    alert("Invite Link: " + window.location.href + "?room=" + roomId);
+
+    const link = `${window.location.origin}?room=${roomId}`;
+
+    prompt("Share this invite link:", link);
   });
 }
 
@@ -33,24 +37,28 @@ function join() {
   document.getElementById("chat").style.display = "block";
 }
 
-// SEND MESSAGE (ENCRYPTED)
+// ERRORS
+socket.on("wrongPassword", () => alert("Wrong password"));
+socket.on("invalidRoom", () => alert("Room not found"));
+socket.on("full", () => alert("Room full"));
+
+// SEND MESSAGE
 function send() {
   let msg = document.getElementById("msg").value;
 
-  let encrypted = encrypt(msg);
-
   socket.emit("msg", {
     room,
-    data: encrypted
+    data: msg
   });
 
   add("You: " + msg);
+
   document.getElementById("msg").value = "";
 }
 
 // RECEIVE MESSAGE
 socket.on("msg", (data) => {
-  add(data.user + ": " + decrypt(data.data));
+  add(data.user + ": " + data.data);
 });
 
 // ONLINE USERS
@@ -64,10 +72,12 @@ function typing() {
   socket.emit("typing", room);
 }
 
-socket.on("typing", (u) => {
-  document.getElementById("status").innerText = u + " is typing...";
+socket.on("typing", (user) => {
+  document.getElementById("typing").innerText =
+    user + " is typing...";
+
   setTimeout(() => {
-    document.getElementById("status").innerText = "";
+    document.getElementById("typing").innerText = "";
   }, 1000);
 });
 
