@@ -5,19 +5,40 @@
 <title>WhatsApp Clone</title>
 
 <style>
-body { margin:0; font-family:Arial; background:#111; color:white; }
-#chat { display:none; padding:10px; }
-.msg { background:#222; margin:5px; padding:8px; border-radius:5px; }
-input, button { width:100%; padding:10px; margin:5px 0; }
-</style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0f0f0f;
+  color: white;
+}
 
+#chat { display:none; padding:10px; }
+
+input, button {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+}
+
+.msg {
+  background: #222;
+  padding: 8px;
+  margin: 5px;
+  border-radius: 5px;
+}
+
+small { color: #aaa; }
+</style>
 </head>
+
 <body>
 
 <div id="login">
   <h2>WhatsApp Clone</h2>
-  <input id="name" placeholder="Name">
-  <input id="room" placeholder="Room">
+
+  <input id="name" placeholder="Your Name">
+  <input id="room" placeholder="Room ID">
+
   <button onclick="join()">Join</button>
 </div>
 
@@ -28,11 +49,16 @@ input, button { width:100%; padding:10px; margin:5px 0; }
 
   <div id="messages"></div>
 
-  <input id="msg">
+  <input id="msg" placeholder="Message">
   <button onclick="send()">Send</button>
 
   <input type="file" id="file">
   <button onclick="sendFile()">Send File</button>
+
+  <button onclick="startCall()">📞 Call</button>
+
+  <video id="local" autoplay muted></video>
+  <video id="remote" autoplay></video>
 
 </div>
 
