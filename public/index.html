@@ -2,36 +2,55 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Debug Chat</title>
+<title>WhatsApp v6</title>
 
 <style>
-body { font-family: Arial; background:#111; color:white; }
+body { margin:0; font-family:Arial; background:#0b0b0b; color:white; }
 
-#chat { display:none; }
+#chat { display:none; padding:10px; }
 
-.msg { background:#222; padding:8px; margin:5px; }
+.msg {
+  background:#222;
+  margin:5px;
+  padding:8px;
+  border-radius:10px;
+}
+
+img {
+  max-width:200px;
+  border-radius:10px;
+}
+
+input, button { width:100%; padding:10px; margin:5px 0; }
 </style>
 </head>
 
 <body>
 
 <div id="login">
-  <h2>JOIN TEST</h2>
+  <h2>WhatsApp v6</h2>
 
   <input id="name" placeholder="Name">
   <input id="room" placeholder="Room">
 
   <button onclick="join()">Join</button>
-
-  <p id="error"></p>
 </div>
 
 <div id="chat">
 
+  <div id="system"></div>
   <div id="messages"></div>
 
   <input id="msg">
   <button onclick="send()">Send</button>
+
+  <input type="file" id="file">
+  <button onclick="sendFile()">Send File</button>
+
+  <button onclick="call()">📞 Call</button>
+
+  <video id="local" autoplay muted></video>
+  <video id="remote" autoplay></video>
 
 </div>
 
