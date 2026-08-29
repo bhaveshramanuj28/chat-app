@@ -2,70 +2,22 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp Style Chat</title>
-
-<style>
-body {
-  font-family: Arial;
-  margin: 0;
-  background: #0f0f0f;
-  color: white;
-}
-
-.container {
-  padding: 10px;
-}
-
-input, button {
-  width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-}
-
-.chat {
-  display: none;
-}
-
-.msg {
-  background: #222;
-  padding: 8px;
-  margin: 5px;
-  border-radius: 5px;
-}
-
-.online {
-  color: lightgreen;
-}
-</style>
-
+<title>Chat</title>
 </head>
-
 <body>
 
-<div class="container" id="login">
-
-<h3>WhatsApp Style Chat</h3>
-
-<input id="user" placeholder="Your Name">
-<input id="room" placeholder="Room (auto from link)">
-<input id="password" placeholder="Password">
-
-<button onclick="createRoom()">Create Invite Room</button>
-<button onclick="join()">Join</button>
-
+<div id="login">
+  <input id="room" placeholder="Room">
+  <input id="password" placeholder="Password">
+  <button onclick="join()">Join</button>
 </div>
 
-<div class="container chat" id="chat">
+<div id="chat" style="display:none;">
 
-<h3>Chat Room</h3>
+  <div id="messages"></div>
 
-<div id="users"></div>
-<div id="messages"></div>
-
-<input id="msg" placeholder="Message..." oninput="typing()">
-<button onclick="send()">Send</button>
-
-<p id="typing"></p>
+  <input id="msg">
+  <button onclick="send()">Send</button>
 
 </div>
 
