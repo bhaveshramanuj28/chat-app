@@ -5,12 +5,17 @@ const io = require("socket.io")(http);
 
 app.use(express.static("public"));
 
-let users = {};
 let rooms = {};
+let users = {};
+
+// CREATE ROOM
+function genRoom() {
+  return Math.random().toString(36).substring(2, 8);
+}
 
 io.on("connection", (socket) => {
 
-  // JOIN ROOM
+  // join room
   socket.on("join", ({ name, room }) => {
 
     socket.name = name;
@@ -23,10 +28,12 @@ io.on("connection", (socket) => {
 
     socket.join(room);
 
-    io.to(room).emit("online", rooms[room].map(id => users[id]));
+    io.to(room).emit("online",
+      rooms[room].map(id => users[id])
+    );
   });
 
-  // MESSAGE
+  // CHAT MESSAGE
   socket.on("msg", ({ room, msg }) => {
     io.to(room).emit("msg", {
       name: socket.name,
@@ -34,7 +41,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  // FILE
+  // FILE SHARING
   socket.on("file", ({ room, file }) => {
     io.to(room).emit("file", {
       name: socket.name,
@@ -47,18 +54,28 @@ io.on("connection", (socket) => {
     socket.to(room).emit("typing", socket.name);
   });
 
+  // WEBRTC SIGNALING (CALL)
+  socket.on("offer", d => socket.to(d.room).emit("offer", d.offer));
+  socket.on("answer", d => socket.to(d.room).emit("answer", d.answer));
+  socket.on("ice", d => socket.to(d.room).emit("ice", d.candidate));
+
   // DISCONNECT
   socket.on("disconnect", () => {
+
+    delete users[socket.id];
 
     for (let r in rooms) {
       rooms[r] = rooms[r].filter(id => id !== socket.id);
 
-      io.to(r).emit("online", rooms[r].map(id => users[id]));
+      io.to(r).emit(
+        "online",
+        rooms[r].map(id => users[id])
+      );
     }
-
-    delete users[socket.id];
   });
 
 });
 
-http.listen(10000, () => console.log("Server running"));
+http.listen(10000, () => {
+  console.log("Server running");
+});
