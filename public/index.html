@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Private Snap Chat</title>
+  <title>Private Chat</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div id="login">
-  <h2>Enter Room Password</h2>
-  <input id="room">
+  <h2>Join Room</h2>
+
+  <input id="room" placeholder="Room name">
+  <input id="password" placeholder="Password">
+
   <button onclick="join()">Join</button>
 </div>
 
@@ -17,9 +20,9 @@
   <video id="localVideo" autoplay muted></video>
   <video id="remoteVideo" autoplay></video>
 
-  <button onclick="startCamera()">📸 Camera</button>
-  <button onclick="startCall()">🎥 Call</button>
-  <button onclick="capture()">📷 Snap</button>
+  <button onclick="startCamera()">Camera</button>
+  <button onclick="startCall()">Call</button>
+  <button onclick="capture()">Snap</button>
 
   <div id="messages"></div>
 
