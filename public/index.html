@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Private Snap Chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login">
+  <h2>Enter Room Password</h2>
+  <input id="room">
+  <button onclick="join()">Join</button>
+</div>
+
+<div id="chat" style="display:none;">
+
+  <video id="localVideo" autoplay muted></video>
+  <video id="remoteVideo" autoplay></video>
+
+  <button onclick="startCamera()">📸 Camera</button>
+  <button onclick="startCall()">🎥 Call</button>
+  <button onclick="capture()">📷 Snap</button>
+
+  <div id="messages"></div>
+
+  <input id="msg" placeholder="Message..." oninput="typing()">
+  <button onclick="send()">Send</button>
+
+  <input type="file" id="file">
+  <button onclick="sendFile()">Send File</button>
+
+  <p id="typing"></p>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
