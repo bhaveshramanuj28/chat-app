@@ -9,63 +9,34 @@ let rooms = {};
 
 io.on("connection", (socket) => {
 
-  console.log("🔵 CONNECTED:", socket.id);
-
   socket.on("join", (data, cb) => {
 
-    console.log("📩 JOIN REQUEST:", data);
+    const { name, room } = data || {};
 
-    try {
-
-      if (!data) {
-        console.log("❌ NO DATA");
-        return cb({ ok: false, error: "No data received" });
-      }
-
-      const { name, room } = data;
-
-      if (!name || !room) {
-        console.log("❌ INVALID NAME/ROOM");
-        return cb({ ok: false, error: "Name/Room required" });
-      }
-
-      if (!rooms[room]) rooms[room] = [];
-
-      console.log("ROOM BEFORE:", rooms[room]);
-
-      if (rooms[room].length >= 2) {
-        console.log("❌ ROOM FULL");
-        return cb({ ok: false, error: "Room full" });
-      }
-
-      socket.name = name;
-      socket.room = room;
-
-      rooms[room].push(socket.id);
-
-      socket.join(room);
-
-      console.log("✅ JOINED:", name, room);
-
-      console.log("ROOM AFTER:", rooms[room]);
-
-      cb({ ok: true });
-
-      io.to(room).emit("msg", {
-        name: "SYSTEM",
-        msg: `${name} joined room`
-      });
-
-    } catch (err) {
-
-      console.log("🔥 SERVER ERROR:", err);
-
-      cb({ ok: false, error: "Server crashed (check console)" });
+    if (!name || !room) {
+      return cb({ ok: false, error: "Invalid data" });
     }
+
+    if (!rooms[room]) rooms[room] = [];
+
+    if (rooms[room].length >= 2) {
+      return cb({ ok: false, error: "Room full" });
+    }
+
+    socket.name = name;
+    socket.room = room;
+
+    rooms[room].push(socket.id);
+
+    socket.join(room);
+
+    cb({ ok: true });
+
+    io.to(room).emit("system", `${name} joined`);
   });
 
+  // TEXT MESSAGE
   socket.on("msg", (d) => {
-
     if (!socket.room) return;
 
     io.to(socket.room).emit("msg", {
@@ -74,19 +45,30 @@ io.on("connection", (socket) => {
     });
   });
 
+  // FILE / IMAGE / AUDIO
+  socket.on("file", (d) => {
+    if (!socket.room) return;
+
+    io.to(socket.room).emit("file", {
+      name: socket.name,
+      file: d.file,
+      type: d.type
+    });
+  });
+
+  // CALL SIGNALING
+  socket.on("offer", d => socket.to(d.room).emit("offer", d.offer));
+  socket.on("answer", d => socket.to(d.room).emit("answer", d.answer));
+  socket.on("ice", d => socket.to(d.room).emit("ice", d.candidate));
+
+  // CLEANUP
   socket.on("disconnect", () => {
-
-    console.log("🔴 DISCONNECT:", socket.id);
-
     for (let r in rooms) {
       rooms[r] = rooms[r].filter(id => id !== socket.id);
-
       if (rooms[r].length === 0) delete rooms[r];
     }
   });
 
 });
 
-http.listen(10000, () => {
-  console.log("🚀 SERVER RUNNING ON 10000");
-});
+http.listen(10000, () => console.log("WhatsApp v6 running"));
