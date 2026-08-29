@@ -2,44 +2,29 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp Clone</title>
+<title>WhatsApp v2</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #0f0f0f;
-  color: white;
-}
-
+body { margin:0; font-family:Arial; background:#111; color:white; }
 #chat { display:none; padding:10px; }
-
-input, button {
-  width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-}
-
-.msg {
-  background: #222;
-  padding: 8px;
-  margin: 5px;
-  border-radius: 5px;
-}
-
-small { color: #aaa; }
+.msg { background:#222; margin:5px; padding:8px; border-radius:6px; }
+input, button { width:100%; padding:10px; margin:5px 0; }
 </style>
+
 </head>
 
 <body>
 
 <div id="login">
-  <h2>WhatsApp Clone</h2>
+  <h2>WhatsApp v2</h2>
 
-  <input id="name" placeholder="Your Name">
-  <input id="room" placeholder="Room ID">
+  <input id="name" placeholder="Name">
+  <input id="room" placeholder="Room">
 
+  <button onclick="createRoom()">Create Room</button>
   <button onclick="join()">Join</button>
+
+  <p id="error"></p>
 </div>
 
 <div id="chat">
@@ -49,13 +34,13 @@ small { color: #aaa; }
 
   <div id="messages"></div>
 
-  <input id="msg" placeholder="Message">
+  <input id="msg">
   <button onclick="send()">Send</button>
 
   <input type="file" id="file">
-  <button onclick="sendFile()">Send File</button>
+  <button onclick="sendFile()">File</button>
 
-  <button onclick="startCall()">📞 Call</button>
+  <button onclick="call()">📞 Call</button>
 
   <video id="local" autoplay muted></video>
   <video id="remote" autoplay></video>
