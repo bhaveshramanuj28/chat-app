@@ -6,82 +6,76 @@ const io = require("socket.io")(http);
 app.use(express.static("public"));
 
 let rooms = {};
-let users = {};
-
-// 🧠 CLEANUP HELPER
-function removeUser(socket) {
-  for (let r in rooms) {
-    rooms[r] = rooms[r].filter(id => id !== socket.id);
-
-    if (rooms[r].length === 0) {
-      delete rooms[r];
-    }
-  }
-  delete users[socket.id];
-}
 
 io.on("connection", (socket) => {
 
-  // JOIN
-  socket.on("join", ({ name, room }, cb) => {
+  console.log("USER CONNECTED:", socket.id);
 
-    if (!rooms[room]) rooms[room] = [];
+  socket.on("join", (data, cb) => {
 
-    // FIX: only active users count
-    if (rooms[room].length >= 2) {
-      cb({ ok: false, error: "Room full" });
-      return;
+    try {
+      console.log("JOIN REQUEST:", data);
+
+      if (!data || !data.name || !data.room) {
+        return cb({ ok: false, error: "Invalid data" });
+      }
+
+      const { name, room } = data;
+
+      if (!rooms[room]) rooms[room] = [];
+
+      if (rooms[room].length >= 2) {
+        return cb({ ok: false, error: "Room full" });
+      }
+
+      socket.name = name;
+      socket.room = room;
+
+      rooms[room].push(socket.id);
+
+      socket.join(room);
+
+      console.log("JOINED:", name, room);
+
+      cb({ ok: true });
+
+      io.to(room).emit("msg", {
+        name: "SYSTEM",
+        msg: name + " joined"
+      });
+
+    } catch (err) {
+      console.log("ERROR:", err);
+      cb({ ok: false, error: "Server crash fixed" });
     }
-
-    socket.name = name;
-    socket.room = room;
-
-    rooms[room].push(socket.id);
-    users[socket.id] = name;
-
-    socket.join(room);
-
-    cb({ ok: true });
-
-    io.to(room).emit("online", rooms[room].map(id => users[id]));
   });
 
   // CHAT
-  socket.on("msg", (d) => {
-    io.to(d.room).emit("msg", {
+  socket.on("msg", (data) => {
+    if (!socket.room) return;
+
+    io.to(socket.room).emit("msg", {
       name: socket.name,
-      msg: d.msg
+      msg: data.msg
     });
   });
 
-  // FILE / IMAGE / VOICE
-  socket.on("file", (d) => {
-    io.to(d.room).emit("file", {
-      name: socket.name,
-      file: d.file,
-      type: d.type
-    });
-  });
-
-  // CALL SIGNALING
-  socket.on("offer", d => socket.to(d.room).emit("offer", d.offer));
-  socket.on("answer", d => socket.to(d.room).emit("answer", d.answer));
-  socket.on("ice", d => socket.to(d.room).emit("ice", d.candidate));
-
-  // 🔥 REAL FIX: DISCONNECT CLEANUP
+  // CLEAN DISCONNECT FIX
   socket.on("disconnect", () => {
 
-    removeUser(socket);
+    console.log("DISCONNECTED:", socket.id);
 
-    // update all rooms
     for (let r in rooms) {
-      io.to(r).emit(
-        "online",
-        rooms[r].map(id => users[id])
-      );
+      rooms[r] = rooms[r].filter(id => id !== socket.id);
+
+      if (rooms[r].length === 0) {
+        delete rooms[r];
+      }
     }
   });
 
 });
 
-http.listen(10000, () => console.log("WhatsApp v4 running"));
+http.listen(10000, () => {
+  console.log("SERVER RUNNING ON 10000");
+});
