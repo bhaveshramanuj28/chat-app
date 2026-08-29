@@ -1,40 +1,68 @@
 const socket = io();
 
 let room;
-let pc = new RTCPeerConnection({
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-});
-
+let pc;
 let channel;
 let localStream;
 
 // JOIN
 function join() {
   room = document.getElementById("room").value;
+  let password = document.getElementById("password").value;
 
-  socket.emit("join", room);
+  socket.emit("join", { room, password });
 
   document.getElementById("login").style.display = "none";
-  document.getElementById("chat").style.display = "flex";
+  document.getElementById("chat").style.display = "block";
 }
 
-socket.on("full", () => alert("Room full"));
+// ERRORS
+socket.on("wrongPassword", () => alert("Wrong Password"));
+socket.on("invalidRoom", () => alert("Room does not exist"));
+socket.on("full", () => alert("Room Full"));
 
-// START CONNECTION
+// START CALL
 socket.on("start", async () => {
+
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
   channel = pc.createDataChannel("chat");
   channel.onmessage = handle;
+
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      socket.emit("ice", { room, candidate: e.candidate });
+    }
+  };
 
   let offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
   socket.emit("offer", { room, offer });
+
+  pc.ontrack = e => {
+    document.getElementById("remoteVideo").srcObject = e.streams[0];
+  };
 });
 
+// OFFER
 socket.on("offer", async (offer) => {
+
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
   pc.ondatachannel = e => {
     channel = e.channel;
     channel.onmessage = handle;
+  };
+
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      socket.emit("ice", { room, candidate: e.candidate });
+    }
   };
 
   await pc.setRemoteDescription(offer);
@@ -45,28 +73,31 @@ socket.on("offer", async (offer) => {
   socket.emit("answer", { room, answer });
 });
 
+// ANSWER
 socket.on("answer", async (answer) => {
   await pc.setRemoteDescription(answer);
 });
 
 // ICE
-pc.onicecandidate = e => {
-  if (e.candidate) socket.emit("ice", { room, candidate: e.candidate });
-};
+socket.on("ice", async (c) => {
+  try {
+    await pc.addIceCandidate(c);
+  } catch (e) {}
+});
 
-socket.on("ice", c => pc.addIceCandidate(c));
-
-// CHAT
+// SEND MESSAGE
 function send() {
   let msg = document.getElementById("msg").value;
 
-  channel.send(JSON.stringify({ type: "text", msg }));
-  add("Me: " + msg);
+  if (channel) {
+    channel.send(JSON.stringify({ type: "text", msg }));
+  }
 
+  add("Me: " + msg);
   document.getElementById("msg").value = "";
 }
 
-// HANDLE DATA
+// HANDLE MESSAGE
 function handle(e) {
   let data = JSON.parse(e.data);
 
@@ -83,7 +114,7 @@ function handle(e) {
   }
 }
 
-// DISAPPEAR
+// MESSAGE UI
 function add(msg) {
   let div = document.createElement("div");
   div.innerText = msg;
@@ -98,11 +129,13 @@ function sendFile() {
   let reader = new FileReader();
 
   reader.onload = () => {
-    channel.send(JSON.stringify({
-      type: "file",
-      name: file.name,
-      file: reader.result
-    }));
+    if (channel) {
+      channel.send(JSON.stringify({
+        type: "file",
+        name: file.name,
+        file: reader.result
+      }));
+    }
   };
 
   reader.readAsDataURL(file);
@@ -110,23 +143,22 @@ function sendFile() {
 
 // CAMERA
 async function startCamera() {
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  localStream = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true
+  });
 
   document.getElementById("localVideo").srcObject = localStream;
 
   localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 }
 
-// VIDEO CALL
-pc.ontrack = e => {
-  document.getElementById("remoteVideo").srcObject = e.streams[0];
-};
-
+// CALL
 function startCall() {
   startCamera();
 }
 
-// SNAP PHOTO
+// SNAP
 function capture() {
   let video = document.getElementById("localVideo");
 
@@ -139,11 +171,13 @@ function capture() {
 
   let img = canvas.toDataURL("image/png");
 
-  channel.send(JSON.stringify({
-    type: "file",
-    name: "snap.png",
-    file: img
-  }));
+  if (channel) {
+    channel.send(JSON.stringify({
+      type: "file",
+      name: "snap.png",
+      file: img
+    }));
+  }
 }
 
 // TYPING
