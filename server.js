@@ -6,64 +6,57 @@ const io = require("socket.io")(http);
 app.use(express.static("public"));
 
 let rooms = {};
+let users = {};
 
 io.on("connection", (socket) => {
 
-  console.log("user connected");
+  socket.on("join", ({ name, room }, cb) => {
 
-  // JOIN (FIXED)
-  socket.on("join", (data, cb) => {
+    if (!rooms[room]) rooms[room] = [];
 
-    try {
-      const { name, room } = data;
-
-      if (!name || !room) {
-        cb({ ok: false, error: "Name or room missing" });
-        return;
-      }
-
-      if (!rooms[room]) {
-        rooms[room] = [];
-      }
-
-      if (rooms[room].length >= 2) {
-        cb({ ok: false, error: "Room full" });
-        return;
-      }
-
-      socket.name = name;
-      socket.room = room;
-
-      rooms[room].push(socket.id);
-
-      socket.join(room);
-
-      cb({ ok: true });
-
-      io.to(room).emit("system", name + " joined");
-
-      io.to(room).emit("online", rooms[room].length);
-
-    } catch (e) {
-      cb({ ok: false, error: "Server error" });
+    if (rooms[room].length >= 2) {
+      cb({ ok: false, error: "Room full" });
+      return;
     }
+
+    socket.name = name;
+    socket.room = room;
+
+    rooms[room].push(socket.id);
+    users[socket.id] = name;
+
+    socket.join(room);
+
+    cb({ ok: true });
+
+    io.to(room).emit("online",
+      rooms[room].map(id => users[id])
+    );
   });
 
-  // MESSAGE
-  socket.on("msg", (data) => {
-    io.to(data.room).emit("msg", {
+  // TEXT
+  socket.on("msg", (d) => {
+    io.to(d.room).emit("msg", {
       name: socket.name,
-      msg: data.msg
+      msg: d.msg,
+      type: "text"
     });
   });
 
-  // DISCONNECT
-  socket.on("disconnect", () => {
-    for (let r in rooms) {
-      rooms[r] = rooms[r].filter(id => id !== socket.id);
-    }
+  // FILE / IMAGE / VOICE
+  socket.on("file", (d) => {
+    io.to(d.room).emit("file", {
+      name: socket.name,
+      file: d.file,
+      fileType: d.fileType
+    });
   });
+
+  // CALL SIGNALING
+  socket.on("offer", d => socket.to(d.room).emit("offer", d.offer));
+  socket.on("answer", d => socket.to(d.room).emit("answer", d.answer));
+  socket.on("ice", d => socket.to(d.room).emit("ice", d.candidate));
 
 });
 
-http.listen(10000, () => console.log("Server running"));
+http.listen(10000, () => console.log("WhatsApp v3.5 running"));
