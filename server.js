@@ -8,12 +8,26 @@ app.use(express.static("public"));
 let rooms = {};
 let users = {};
 
+// 🧠 CLEANUP HELPER
+function removeUser(socket) {
+  for (let r in rooms) {
+    rooms[r] = rooms[r].filter(id => id !== socket.id);
+
+    if (rooms[r].length === 0) {
+      delete rooms[r];
+    }
+  }
+  delete users[socket.id];
+}
+
 io.on("connection", (socket) => {
 
+  // JOIN
   socket.on("join", ({ name, room }, cb) => {
 
     if (!rooms[room]) rooms[room] = [];
 
+    // FIX: only active users count
     if (rooms[room].length >= 2) {
       cb({ ok: false, error: "Room full" });
       return;
@@ -29,17 +43,14 @@ io.on("connection", (socket) => {
 
     cb({ ok: true });
 
-    io.to(room).emit("online",
-      rooms[room].map(id => users[id])
-    );
+    io.to(room).emit("online", rooms[room].map(id => users[id]));
   });
 
-  // TEXT
+  // CHAT
   socket.on("msg", (d) => {
     io.to(d.room).emit("msg", {
       name: socket.name,
-      msg: d.msg,
-      type: "text"
+      msg: d.msg
     });
   });
 
@@ -48,7 +59,7 @@ io.on("connection", (socket) => {
     io.to(d.room).emit("file", {
       name: socket.name,
       file: d.file,
-      fileType: d.fileType
+      type: d.type
     });
   });
 
@@ -57,6 +68,20 @@ io.on("connection", (socket) => {
   socket.on("answer", d => socket.to(d.room).emit("answer", d.answer));
   socket.on("ice", d => socket.to(d.room).emit("ice", d.candidate));
 
+  // 🔥 REAL FIX: DISCONNECT CLEANUP
+  socket.on("disconnect", () => {
+
+    removeUser(socket);
+
+    // update all rooms
+    for (let r in rooms) {
+      io.to(r).emit(
+        "online",
+        rooms[r].map(id => users[id])
+      );
+    }
+  });
+
 });
 
-http.listen(10000, () => console.log("WhatsApp v3.5 running"));
+http.listen(10000, () => console.log("WhatsApp v4 running"));
