@@ -2,27 +2,44 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chat</title>
+<title>WhatsApp Clone</title>
+<link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
 <div id="login">
-  <input id="room" placeholder="Room">
+  <h2>WhatsApp Clone</h2>
+
+  <input id="user" placeholder="Name">
+  <input id="room" placeholder="Room (or link auto)">
   <input id="password" placeholder="Password">
+
+  <button onclick="createRoom()">Create Room</button>
   <button onclick="join()">Join</button>
 </div>
 
-<div id="chat" style="display:none;">
+<div id="chat">
+
+  <div id="online"></div>
+  <div id="typing"></div>
 
   <div id="messages"></div>
 
   <input id="msg">
   <button onclick="send()">Send</button>
 
+  <input type="file" id="file">
+  <button onclick="sendFile()">File</button>
+
+  <button onclick="startCall()">Call</button>
+
+  <video id="local" autoplay muted></video>
+  <video id="remote" autoplay></video>
+
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="app.js"></script>
-
 </body>
 </html>
