@@ -2,6 +2,7 @@ const socket = io();
 
 let room;
 let name;
+let pc;
 
 // JOIN
 function join() {
@@ -15,27 +16,31 @@ function join() {
   document.getElementById("chat").style.display = "block";
 }
 
-// SEND MESSAGE
+// SEND MESSAGE (NO DUPLICATE BUG FIXED)
 function send() {
 
   let msg = document.getElementById("msg").value;
 
   socket.emit("msg", { room, msg });
 
-  add("You: " + msg);
-
   document.getElementById("msg").value = "";
 }
 
 // RECEIVE MESSAGE
 socket.on("msg", data => {
-  add(data.name + ": " + data.msg);
+
+  if (data.name === name) {
+    add("You: " + data.msg);
+  } else {
+    add(data.name + ": " + data.msg);
+  }
 });
 
 // FILE SEND
 function sendFile() {
 
   let file = document.getElementById("file").files[0];
+
   let reader = new FileReader();
 
   reader.onload = () => {
@@ -48,7 +53,7 @@ function sendFile() {
   reader.readAsDataURL(file);
 }
 
-// RECEIVE FILE
+// FILE RECEIVE
 socket.on("file", data => {
 
   let a = document.createElement("a");
@@ -79,10 +84,73 @@ socket.on("typing", name => {
   }, 1000);
 });
 
-// UI
+// ADD MESSAGE UI
 function add(msg) {
   let div = document.createElement("div");
   div.className = "msg";
   div.innerText = msg;
   document.getElementById("messages").appendChild(div);
 }
+
+---
+
+# 📞 CALL SYSTEM (WEBRTC SIMPLE)
+
+async function startCall() {
+
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
+  let stream = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true
+  });
+
+  document.getElementById("local").srcObject = stream;
+
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+
+  pc.ontrack = e => {
+    document.getElementById("remote").srcObject = e.streams[0];
+  };
+
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      socket.emit("ice", { room, candidate: e.candidate });
+    }
+  };
+
+  let offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  socket.emit("offer", { room, offer });
+}
+
+// RECEIVE CALL
+socket.on("offer", async (offer) => {
+
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
+  pc.ontrack = e => {
+    document.getElementById("remote").srcObject = e.streams[0];
+  };
+
+  pc.onicecandidate = e => {
+    if (e.candidate) {
+      socket.emit("ice", { room, candidate: e.candidate });
+    }
+  };
+
+  await pc.setRemoteDescription(offer);
+
+  let answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+
+  socket.emit("answer", { room, answer });
+});
+
+socket.on("answer", ans => pc.setRemoteDescription(ans));
+socket.on("ice", c => pc.addIceCandidate(c));
