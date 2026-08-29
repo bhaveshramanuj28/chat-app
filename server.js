@@ -5,21 +5,19 @@ const io = require("socket.io")(http);
 
 app.use(express.static("public"));
 
-// dynamic rooms (invite system)
 let rooms = {};
-
-// online users
 let onlineUsers = {};
 
-function makeRoom() {
+function createRoomId() {
   return Math.random().toString(36).substring(2, 8);
 }
 
 io.on("connection", (socket) => {
 
-  // create room + invite link
+  // CREATE ROOM
   socket.on("createRoom", (password, cb) => {
-    let roomId = makeRoom();
+
+    const roomId = createRoomId();
 
     rooms[roomId] = {
       password,
@@ -29,7 +27,7 @@ io.on("connection", (socket) => {
     cb({ roomId });
   });
 
-  // join room
+  // JOIN ROOM (IMPORTANT FIX)
   socket.on("join", ({ room, password, user }) => {
 
     if (!rooms[room]) {
@@ -55,14 +53,18 @@ io.on("connection", (socket) => {
 
     onlineUsers[socket.id] = user;
 
-    io.to(room).emit("onlineUsers", rooms[room].users.map(id => onlineUsers[id]));
+    // send online list
+    io.to(room).emit(
+      "onlineUsers",
+      rooms[room].users.map(id => onlineUsers[id])
+    );
 
     if (rooms[room].users.length === 2) {
       io.to(room).emit("start");
     }
   });
 
-  // messaging
+  // CHAT MESSAGE
   socket.on("msg", ({ room, data }) => {
     socket.to(room).emit("msg", {
       user: socket.user,
@@ -70,19 +72,21 @@ io.on("connection", (socket) => {
     });
   });
 
-  // typing
+  // TYPING
   socket.on("typing", (room) => {
     socket.to(room).emit("typing", socket.user);
   });
 
-  // disconnect
+  // DISCONNECT
   socket.on("disconnect", () => {
+
     delete onlineUsers[socket.id];
 
     for (let r in rooms) {
       rooms[r].users = rooms[r].users.filter(id => id !== socket.id);
 
-      io.to(r).emit("onlineUsers",
+      io.to(r).emit(
+        "onlineUsers",
         rooms[r].users.map(id => onlineUsers[id])
       );
     }
