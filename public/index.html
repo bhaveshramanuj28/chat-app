@@ -1,42 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Private Chat</title>
-  <link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Chat</title>
+
+<style>
+body {
+  font-family: Arial;
+  margin: 0;
+  background: #111;
+  color: white;
+}
+
+.container {
+  padding: 10px;
+}
+
+input, button {
+  width: 100%;
+  margin: 5px 0;
+  padding: 10px;
+}
+
+.chat {
+  display: none;
+}
+
+.msg {
+  background: #222;
+  margin: 5px;
+  padding: 8px;
+  border-radius: 5px;
+}
+
+.online {
+  color: lightgreen;
+}
+</style>
+
 </head>
+
 <body>
 
-<div id="login">
-  <h2>Join Room</h2>
+<div class="container" id="login">
 
-  <input id="room" placeholder="Room name">
-  <input id="password" placeholder="Password">
+<h3>Create / Join Room</h3>
 
-  <button onclick="join()">Join</button>
+<input id="user" placeholder="Your Name">
+<input id="room" placeholder="Room ID (or create)">
+<input id="password" placeholder="Password">
+
+<button onclick="createRoom()">Create Room</button>
+<button onclick="join()">Join Room</button>
+
 </div>
 
-<div id="chat" style="display:none;">
+<div class="container chat" id="chat">
 
-  <video id="localVideo" autoplay muted></video>
-  <video id="remoteVideo" autoplay></video>
+<h3>Chat</h3>
 
-  <button onclick="startCamera()">Camera</button>
-  <button onclick="startCall()">Call</button>
-  <button onclick="capture()">Snap</button>
+<div id="status"></div>
+<div id="users"></div>
 
-  <div id="messages"></div>
+<div id="messages"></div>
 
-  <input id="msg" placeholder="Message..." oninput="typing()">
-  <button onclick="send()">Send</button>
-
-  <input type="file" id="file">
-  <button onclick="sendFile()">Send File</button>
-
-  <p id="typing"></p>
+<input id="msg" oninput="typing()" placeholder="Message">
+<button onclick="send()">Send</button>
 
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="app.js"></script>
+
 </body>
 </html>
