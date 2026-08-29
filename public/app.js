@@ -1,113 +1,83 @@
 const socket = io();
 
 let room;
-let user;
-let pc;
-let channel;
-let ready = false;
-
-// CREATE ROOM
-function createRoom() {
-  let pass = document.getElementById("password").value;
-
-  socket.emit("createRoom", pass, ({ roomId }) => {
-    const link = `${location.origin}?room=${roomId}`;
-    prompt("Invite Link:", link);
-  });
-}
-
-// AUTO FILL ROOM FROM LINK
-window.onload = () => {
-  const r = new URLSearchParams(location.search).get("room");
-  if (r) document.getElementById("room").value = r;
-};
+let name;
 
 // JOIN
 function join() {
+
+  name = document.getElementById("name").value;
   room = document.getElementById("room").value;
-  let password = document.getElementById("password").value;
-  user = document.getElementById("user").value;
 
-  socket.emit("join", { room, password, user });
+  socket.emit("join", { name, room });
+
+  document.getElementById("login").style.display = "none";
+  document.getElementById("chat").style.display = "block";
 }
-
-// INIT PEER
-function initPeer() {
-
-  pc = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-  });
-
-  pc.onicecandidate = e => {
-    if (e.candidate) {
-      socket.emit("ice", { room, candidate: e.candidate });
-    }
-  };
-
-  pc.ondatachannel = (e) => {
-    channel = e.channel;
-
-    channel.onopen = () => ready = true;
-
-    channel.onmessage = (e) => {
-      add("Friend: " + e.data);
-    };
-  };
-}
-
-// START EVENT
-socket.on("start", async ({ initiator }) => {
-
-  initPeer();
-
-  if (initiator) {
-
-    channel = pc.createDataChannel("chat");
-
-    channel.onopen = () => ready = true;
-
-    let offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-
-    socket.emit("offer", { room, offer });
-  }
-
-});
-
-// OFFER
-socket.on("offer", async (offer) => {
-
-  initPeer();
-
-  await pc.setRemoteDescription(offer);
-
-  let answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-
-  socket.emit("answer", { room, answer });
-});
-
-// ANSWER
-socket.on("answer", ans => pc.setRemoteDescription(ans));
-
-// ICE
-socket.on("ice", c => pc.addIceCandidate(c));
 
 // SEND MESSAGE
 function send() {
 
   let msg = document.getElementById("msg").value;
 
-  if (!channel || !ready) {
-    alert("Not connected yet");
-    return;
-  }
+  socket.emit("msg", { room, msg });
 
-  channel.send(msg);
-  add("Me: " + msg);
+  add("You: " + msg);
 
   document.getElementById("msg").value = "";
 }
+
+// RECEIVE MESSAGE
+socket.on("msg", data => {
+  add(data.name + ": " + data.msg);
+});
+
+// FILE SEND
+function sendFile() {
+
+  let file = document.getElementById("file").files[0];
+  let reader = new FileReader();
+
+  reader.onload = () => {
+    socket.emit("file", {
+      room,
+      file: reader.result
+    });
+  };
+
+  reader.readAsDataURL(file);
+}
+
+// RECEIVE FILE
+socket.on("file", data => {
+
+  let a = document.createElement("a");
+  a.href = data.file;
+  a.download = "file";
+  a.innerText = data.name + " sent a file";
+
+  document.getElementById("messages").appendChild(a);
+});
+
+// ONLINE USERS
+socket.on("online", users => {
+  document.getElementById("online").innerText =
+    "Online: " + users.join(", ");
+});
+
+// TYPING
+function typing() {
+  socket.emit("typing", room);
+}
+
+socket.on("typing", name => {
+  document.getElementById("typing").innerText =
+    name + " is typing...";
+
+  setTimeout(() => {
+    document.getElementById("typing").innerText = "";
+  }, 1000);
+});
 
 // UI
 function add(msg) {
