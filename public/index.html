@@ -2,10 +2,15 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chat App</title>
+<title>Chat v11</title>
 
 <style>
-body { margin:0; font-family:Arial; background:#121212; color:white; }
+body {
+  margin:0;
+  font-family:Arial;
+  background:#0f0f0f;
+  color:white;
+}
 
 #login {
   display:flex;
@@ -28,35 +33,45 @@ body { margin:0; font-family:Arial; background:#121212; color:white; }
 
 .msg {
   padding:10px;
-  margin:5px;
-  border-radius:10px;
+  margin:6px;
+  border-radius:12px;
   max-width:70%;
 }
 
-.me { background:#4caf50; margin-left:auto; }
-.other { background:#333; }
+.me { background:#25d366; margin-left:auto; }
+.other { background:#2a2a2a; }
 
-#inputArea {
+#input {
   display:flex;
   padding:10px;
-  background:#1e1e1e;
+  background:#1a1a1a;
 }
 
-#msg {
+#input input {
   flex:1;
   padding:10px;
 }
 
 button {
-  padding:10px;
   margin-left:5px;
+  padding:10px;
 }
 
-img { max-width:200px; border-radius:10px; }
+img {
+  max-width:200px;
+  border-radius:10px;
+}
 
 video {
-  width:45%;
+  width:48%;
   margin:5px;
+  border-radius:10px;
+}
+
+#typing {
+  padding:5px;
+  font-size:12px;
+  color:#aaa;
 }
 </style>
 </head>
@@ -73,16 +88,15 @@ video {
 <div id="chat">
 
   <div id="messages"></div>
-
   <div id="typing"></div>
 
-  <div id="inputArea">
+  <div id="input">
     <input id="msg" oninput="typing()">
     <button onclick="send()">Send</button>
-    <button onclick="recordVoice()">🎤</button>
+    <button onclick="voice()">🎤</button>
+    <button onclick="call()">📞</button>
     <input type="file" id="file">
     <button onclick="sendFile()">📎</button>
-    <button onclick="call()">📞</button>
   </div>
 
   <div>
