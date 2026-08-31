@@ -2,17 +2,17 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chat v12</title>
+<title>Chat Fix</title>
 
 <style>
 body {
   margin:0;
   font-family:Arial;
-  background:#0e0e0e;
+  background:#111;
   color:white;
 }
 
-/* LOGIN FIXED UI */
+/* LOGIN */
 #login {
   height:100vh;
   display:flex;
@@ -20,20 +20,17 @@ body {
   align-items:center;
 }
 
-.loginBox {
+.box {
   width:300px;
-  background:#1b1b1b;
+  background:#1e1e1e;
   padding:20px;
-  border-radius:12px;
-  text-align:center;
+  border-radius:10px;
 }
 
 input {
   width:100%;
   padding:10px;
-  margin:8px 0;
-  border:none;
-  border-radius:8px;
+  margin:5px 0;
 }
 
 button {
@@ -42,7 +39,6 @@ button {
   background:#25d366;
   border:none;
   color:white;
-  border-radius:8px;
 }
 
 /* CHAT */
@@ -50,12 +46,6 @@ button {
   display:none;
   height:100vh;
   flex-direction:column;
-}
-
-#topBar {
-  background:#1b1b1b;
-  padding:10px;
-  font-size:14px;
 }
 
 #messages {
@@ -68,28 +58,32 @@ button {
   padding:10px;
   margin:6px;
   border-radius:10px;
-  max-width:70%;
+  max-width:60%;
 }
 
-.me { background:#25d366; margin-left:auto; }
-.other { background:#2b2b2b; }
+.me {
+  background:#25d366;
+  margin-left:auto;
+}
 
-.tick { font-size:11px; color:#aaa; }
+.other {
+  background:#2a2a2a;
+}
 
 #input {
   display:flex;
   padding:10px;
-  background:#1b1b1b;
+  background:#1a1a1a;
 }
 
 #input input {
   flex:1;
+  padding:10px;
 }
 
 video {
   width:48%;
   margin:5px;
-  border-radius:10px;
 }
 </style>
 </head>
@@ -97,24 +91,19 @@ video {
 <body>
 
 <div id="login">
-  <div class="loginBox">
-    <h2>Join Chat</h2>
+  <div class="box">
     <input id="name" placeholder="Name">
     <input id="room" placeholder="Room">
-    <button onclick="join()">Enter</button>
+    <button onclick="join()">Join</button>
   </div>
 </div>
 
 <div id="chat">
 
-  <div id="topBar">
-    👥 Users: <span id="users"></span>
-  </div>
-
   <div id="messages"></div>
 
   <div id="input">
-    <input id="msg">
+    <input id="msg" placeholder="Message">
     <button onclick="send()">Send</button>
     <button onclick="call()">📞</button>
   </div>
