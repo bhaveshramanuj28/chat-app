@@ -11,7 +11,11 @@ io.on("connection", (socket) => {
 
   socket.on("join", (data, cb) => {
 
-    const { name, room } = data;
+    const { name, room } = data || {};
+
+    if (!name || !room) {
+      return cb({ ok: false, error: "Invalid data" });
+    }
 
     if (!rooms[room]) rooms[room] = [];
 
@@ -27,38 +31,35 @@ io.on("connection", (socket) => {
 
     cb({ ok: true });
 
-    io.to(room).emit("system", name + " joined");
+    io.to(room).emit("system", `${name} joined`);
   });
 
-  // MESSAGE
+  // TEXT
   socket.on("msg", (d) => {
-
-    let message = {
-      id: Date.now(),
+    io.to(socket.room).emit("msg", {
       name: socket.name,
-      msg: d.msg,
-      reply: d.reply || null
-    };
-
-    io.to(socket.room).emit("msg", message);
-
-    socket.to(socket.room).emit("delivered", message.id);
+      msg: d.msg
+    });
   });
 
-  // READ
-  socket.on("read", id => {
-    socket.to(socket.room).emit("read", id);
+  // FILE / AUDIO
+  socket.on("file", (d) => {
+    io.to(socket.room).emit("file", {
+      name: socket.name,
+      file: d.file,
+      type: d.type
+    });
   });
 
-  // DELETE
-  socket.on("delete", id => {
-    io.to(socket.room).emit("delete", id);
+  // TYPING
+  socket.on("typing", () => {
+    socket.to(socket.room).emit("typing", socket.name);
   });
 
-  // FILE
-  socket.on("file", d => {
-    io.to(socket.room).emit("file", d);
-  });
+  // CALL SIGNALING
+  socket.on("offer", d => socket.to(socket.room).emit("offer", d));
+  socket.on("answer", d => socket.to(socket.room).emit("answer", d));
+  socket.on("ice", d => socket.to(socket.room).emit("ice", d));
 
   socket.on("disconnect", () => {
     for (let r in rooms) {
@@ -69,4 +70,4 @@ io.on("connection", (socket) => {
 
 });
 
-http.listen(10000);
+http.listen(10000, () => console.log("v9 running"));
