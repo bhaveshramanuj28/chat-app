@@ -2,7 +2,6 @@ const socket = io();
 
 let room, name;
 let pc;
-let msgMap = {};
 
 // JOIN
 function join() {
@@ -17,55 +16,30 @@ function join() {
   });
 }
 
-// SEND
+// SEND (FIXED EMPTY MESSAGE BUG)
 function send() {
-  let msg = document.getElementById("msg").value;
+
+  let msg = document.getElementById("msg").value.trim();
+
+  if (msg === "") return;   // ✅ FIXED
 
   socket.emit("msg", msg);
 
   document.getElementById("msg").value = "";
 }
 
-// RECEIVE
+// RECEIVE MESSAGE
 socket.on("msg", d => {
-
   let div = document.createElement("div");
+
   div.className = "msg " + (d.name === name ? "me" : "other");
 
-  div.innerHTML = `
-    ${d.name}: ${d.msg}
-    <div class="tick" id="t-${d.id}">✓</div>
-  `;
-
-  div.onclick = () => socket.emit("read", d.id);
+  div.innerText = d.name + ": " + d.msg;
 
   document.getElementById("messages").appendChild(div);
-
-  msgMap[d.id] = div;
 });
 
-// DELIVERED
-socket.on("delivered", id => {
-  if (msgMap[id]) {
-    msgMap[id].querySelector(".tick").innerText = "✓✓";
-  }
-});
-
-// READ
-socket.on("read", id => {
-  if (msgMap[id]) {
-    msgMap[id].querySelector(".tick").style.color = "skyblue";
-    msgMap[id].querySelector(".tick").innerText = "✓✓";
-  }
-});
-
-// ONLINE STATUS
-socket.on("presence", users => {
-  document.getElementById("users").innerText =
-    users.map(u => u.name + (u.online ? "🟢" : "⚫")).join(", ");
-});
-
-// 📞 VIDEO CALL FIXED
+// 📞 VIDEO CALL (FIXED FULL FLOW)
 async function call() {
 
   pc = new RTCPeerConnection({
