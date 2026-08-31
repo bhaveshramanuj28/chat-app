@@ -1,16 +1,7 @@
 const socket = io();
 
 let room, name;
-let replyMsg = null;
-let messages = {};
-
-// SIMPLE ENCRYPT
-function enc(text) {
-  return btoa(text);
-}
-function dec(text) {
-  return atob(text);
-}
+let pc;
 
 // JOIN
 function join() {
@@ -21,77 +12,170 @@ function join() {
     if (!res.ok) return alert(res.error);
 
     document.getElementById("login").style.display = "none";
-    document.getElementById("chat").style.display = "block";
+    document.getElementById("chat").style.display = "flex";
   });
 }
 
-// SEND
+// SEND TEXT
 function send() {
   let msg = document.getElementById("msg").value;
 
-  socket.emit("msg", {
-    msg: enc(msg),
-    reply: replyMsg
-  });
+  socket.emit("msg", { msg });
 
-  replyMsg = null;
-  document.getElementById("replyPreview").innerHTML = "";
   document.getElementById("msg").value = "";
 }
 
-// RECEIVE
+// RECEIVE TEXT
 socket.on("msg", d => {
+  addMsg(d.name, d.msg);
+});
 
-  let isMe = d.name === name;
+// UI MSG
+function addMsg(sender, text) {
 
   let div = document.createElement("div");
-  div.className = "msg " + (isMe ? "me" : "other");
 
-  let text = dec(d.msg);
+  div.className = "msg " + (sender === name ? "me" : "other");
 
-  div.innerHTML = `
-    ${d.reply ? `<div class="replyBox">${d.reply}</div>` : ""}
-    ${text}
-    <div class="tick" id="tick-${d.id}">
-      ${isMe ? "✓" : ""}
-    </div>
-  `;
-
-  // RIGHT CLICK = REPLY
-  div.oncontextmenu = () => {
-    replyMsg = text;
-    document.getElementById("replyPreview").innerText = "Reply: " + text;
-  };
-
-  // DOUBLE CLICK = DELETE
-  div.ondblclick = () => {
-    socket.emit("delete", d.id);
-  };
+  div.innerText = sender + ": " + text;
 
   document.getElementById("messages").appendChild(div);
+}
 
-  messages[d.id] = div;
+// FILE
+function sendFile() {
+  let file = document.getElementById("file").files[0];
 
-  if (!isMe) socket.emit("read", d.id);
+  let reader = new FileReader();
+
+  reader.onload = () => {
+    socket.emit("file", {
+      file: reader.result,
+      type: file.type
+    });
+
+    showFile(reader.result, file.type);
+  };
+
+  reader.readAsDataURL(file);
+}
+
+// RECEIVE FILE
+socket.on("file", d => {
+  showFile(d.file, d.type);
 });
 
-// DELIVERED
-socket.on("delivered", id => {
-  if (messages[id]) {
-    messages[id].querySelector(".tick").innerText = "✓✓";
+function showFile(file, type) {
+
+  let div = document.createElement("div");
+
+  if (type.startsWith("image")) {
+    div.innerHTML = `<img src="${file}">`;
+  } else if (type.startsWith("audio")) {
+    div.innerHTML = `<audio controls src="${file}"></audio>`;
+  } else {
+    div.innerHTML = `<a href="${file}" download>Download</a>`;
   }
+
+  document.getElementById("messages").appendChild(div);
+}
+
+// TYPING
+function typing() {
+  socket.emit("typing");
+}
+
+socket.on("typing", n => {
+  document.getElementById("typing").innerText = n + " typing...";
+  setTimeout(() => {
+    document.getElementById("typing").innerText = "";
+  }, 1000);
 });
 
-// READ
-socket.on("read", id => {
-  if (messages[id]) {
-    messages[id].querySelector(".tick").style.color = "skyblue";
-  }
+// 🎤 VOICE
+let recorder, chunks=[];
+
+async function recordVoice() {
+
+  let stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+
+  recorder = new MediaRecorder(stream);
+
+  recorder.start();
+
+  recorder.ondataavailable = e => chunks.push(e.data);
+
+  recorder.onstop = () => {
+
+    let blob = new Blob(chunks);
+
+    let reader = new FileReader();
+
+    reader.onload = () => {
+      socket.emit("file", {
+        file: reader.result,
+        type: "audio"
+      });
+    };
+
+    reader.readAsDataURL(blob);
+
+    chunks=[];
+  };
+
+  setTimeout(()=>recorder.stop(),3000);
+}
+
+// 📞 CALL
+async function call() {
+
+  pc = new RTCPeerConnection({
+    iceServers:[{urls:"stun:stun.l.google.com:19302"}]
+  });
+
+  let stream = await navigator.mediaDevices.getUserMedia({
+    video:true,
+    audio:true
+  });
+
+  document.getElementById("local").srcObject = stream;
+
+  stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+
+  pc.ontrack = e=>{
+    document.getElementById("remote").srcObject = e.streams[0];
+  };
+
+  pc.onicecandidate = e=>{
+    if(e.candidate){
+      socket.emit("ice",e.candidate);
+    }
+  };
+
+  let offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  socket.emit("offer",offer);
+}
+
+// RECEIVE CALL
+socket.on("offer", async offer => {
+
+  pc = new RTCPeerConnection({
+    iceServers:[{urls:"stun:stun.l.google.com:19302"}]
+  });
+
+  await pc.setRemoteDescription(offer);
+
+  let ans = await pc.createAnswer();
+  await pc.setLocalDescription(ans);
+
+  socket.emit("answer",ans);
+
+  pc.ontrack = e=>{
+    document.getElementById("remote").srcObject = e.streams[0];
+  };
 });
 
-// DELETE
-socket.on("delete", id => {
-  if (messages[id]) {
-    messages[id].innerText = "🚫 Message deleted";
-  }
-});
+socket.on("answer", ans => pc.setRemoteDescription(ans));
+socket.on("ice", c => pc.addIceCandidate(c));
