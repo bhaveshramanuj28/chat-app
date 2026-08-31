@@ -2,24 +2,21 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp v7</title>
+<title>WhatsApp Clone</title>
 
 <style>
-body { margin:0; font-family:Arial; background:#111; color:white; }
+body { margin:0; font-family:Arial; background:#0b0b0b; color:white; }
 
 #chat { display:none; padding:10px; }
 
 .msg {
-  padding:8px;
+  background:#222;
   margin:5px;
+  padding:8px;
   border-radius:10px;
-  max-width:70%;
 }
 
-.me { background:#075e54; margin-left:auto; }
-.other { background:#222; }
-
-.tick { font-size:12px; color:#aaa; }
+.me { background:#075e54; }
 
 img { max-width:200px; border-radius:10px; }
 
@@ -30,7 +27,7 @@ input, button { width:100%; padding:10px; margin:5px 0; }
 <body>
 
 <div id="login">
-  <h2>WhatsApp v7</h2>
+  <h2>WhatsApp Clone</h2>
 
   <input id="name" placeholder="Name">
   <input id="room" placeholder="Room">
@@ -40,10 +37,10 @@ input, button { width:100%; padding:10px; margin:5px 0; }
 
 <div id="chat">
 
-  <div id="typing"></div>
+  <div id="system"></div>
   <div id="messages"></div>
 
-  <input id="msg" oninput="typing()">
+  <input id="msg">
   <button onclick="send()">Send</button>
 
   <button onclick="recordVoice()">🎤 Voice</button>
