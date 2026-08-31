@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chat Fix</title>
+<title>Chat v14</title>
 
 <style>
 body {
   margin:0;
   font-family:Arial;
-  background:#111;
+  background:#0d0d0d;
   color:white;
 }
 
@@ -20,25 +20,29 @@ body {
   align-items:center;
 }
 
-.box {
-  width:300px;
-  background:#1e1e1e;
+.card {
+  width:320px;
+  background:#1c1c1c;
   padding:20px;
-  border-radius:10px;
+  border-radius:12px;
 }
 
 input {
   width:100%;
   padding:10px;
-  margin:5px 0;
+  margin:6px 0;
+  border:none;
+  border-radius:8px;
 }
 
 button {
   width:100%;
   padding:10px;
+  margin-top:6px;
   background:#25d366;
   border:none;
   color:white;
+  border-radius:8px;
 }
 
 /* CHAT */
@@ -55,35 +59,44 @@ button {
 }
 
 .msg {
+  max-width:70%;
   padding:10px;
   margin:6px;
-  border-radius:10px;
-  max-width:60%;
+  border-radius:12px;
+  word-wrap:break-word;
 }
 
-.me {
-  background:#25d366;
-  margin-left:auto;
-}
-
-.other {
-  background:#2a2a2a;
-}
+.me { background:#25d366; margin-left:auto; }
+.other { background:#2a2a2a; }
 
 #input {
   display:flex;
   padding:10px;
-  background:#1a1a1a;
+  background:#1b1b1b;
 }
 
 #input input {
   flex:1;
   padding:10px;
+  border-radius:8px;
+  border:none;
+}
+
+.btn {
+  width:auto;
+  margin-left:5px;
 }
 
 video {
   width:48%;
+  border-radius:10px;
   margin:5px;
+}
+
+#typing {
+  font-size:12px;
+  padding:5px 10px;
+  color:#aaa;
 }
 </style>
 </head>
@@ -91,21 +104,26 @@ video {
 <body>
 
 <div id="login">
-  <div class="box">
+  <div class="card">
+    <h3>Join Chat</h3>
     <input id="name" placeholder="Name">
     <input id="room" placeholder="Room">
-    <button onclick="join()">Join</button>
+    <button onclick="join()">Enter</button>
   </div>
 </div>
 
 <div id="chat">
 
   <div id="messages"></div>
+  <div id="typing"></div>
 
   <div id="input">
-    <input id="msg" placeholder="Message">
-    <button onclick="send()">Send</button>
-    <button onclick="call()">📞</button>
+    <input id="msg" placeholder="message">
+    <button class="btn" onclick="send()">Send</button>
+    <button class="btn" onclick="voice()">🎤</button>
+    <button class="btn" onclick="call()">📞</button>
+    <input type="file" id="file">
+    <button class="btn" onclick="sendFile()">📎</button>
   </div>
 
   <video id="local" autoplay muted></video>
