@@ -2,8 +2,7 @@ const socket = io();
 
 let room, name;
 let pc;
-let recorder;
-let chunks = [];
+let msgMap = {};
 
 // JOIN
 function join() {
@@ -18,82 +17,55 @@ function join() {
   });
 }
 
-// SEND TEXT
+// SEND
 function send() {
   let msg = document.getElementById("msg").value;
+
   socket.emit("msg", msg);
+
   document.getElementById("msg").value = "";
 }
 
-// RECEIVE TEXT
-socket.on("msg", (d) => {
+// RECEIVE
+socket.on("msg", d => {
+
   let div = document.createElement("div");
   div.className = "msg " + (d.name === name ? "me" : "other");
-  div.innerText = d.name + ": " + d.msg;
+
+  div.innerHTML = `
+    ${d.name}: ${d.msg}
+    <div class="tick" id="t-${d.id}">✓</div>
+  `;
+
+  div.onclick = () => socket.emit("read", d.id);
+
   document.getElementById("messages").appendChild(div);
+
+  msgMap[d.id] = div;
 });
 
-// FILE
-function sendFile() {
-  let file = document.getElementById("file").files[0];
-  let reader = new FileReader();
-
-  reader.onload = () => {
-    socket.emit("file", {
-      file: reader.result,
-      type: file.type
-    });
-  };
-
-  reader.readAsDataURL(file);
-}
-
-// RECEIVE FILE
-socket.on("file", (d) => {
-  let div = document.createElement("div");
-
-  if (d.type.startsWith("image")) {
-    div.innerHTML = `<img src="${d.file}">`;
-  } else if (d.type.startsWith("audio")) {
-    div.innerHTML = `<audio controls src="${d.file}"></audio>`;
-  } else {
-    div.innerHTML = `<a href="${d.file}" download>Download File</a>`;
+// DELIVERED
+socket.on("delivered", id => {
+  if (msgMap[id]) {
+    msgMap[id].querySelector(".tick").innerText = "✓✓";
   }
-
-  document.getElementById("messages").appendChild(div);
 });
 
-// VOICE NOTE (FIXED)
-async function voice() {
+// READ
+socket.on("read", id => {
+  if (msgMap[id]) {
+    msgMap[id].querySelector(".tick").style.color = "skyblue";
+    msgMap[id].querySelector(".tick").innerText = "✓✓";
+  }
+});
 
-  let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+// ONLINE STATUS
+socket.on("presence", users => {
+  document.getElementById("users").innerText =
+    users.map(u => u.name + (u.online ? "🟢" : "⚫")).join(", ");
+});
 
-  recorder = new MediaRecorder(stream);
-  chunks = [];
-
-  recorder.ondataavailable = e => chunks.push(e.data);
-
-  recorder.onstop = () => {
-
-    let blob = new Blob(chunks, { type: "audio/webm" });
-    let reader = new FileReader();
-
-    reader.onload = () => {
-      socket.emit("file", {
-        file: reader.result,
-        type: "audio"
-      });
-    };
-
-    reader.readAsDataURL(blob);
-  };
-
-  recorder.start();
-
-  setTimeout(() => recorder.stop(), 4000);
-}
-
-// CALL (WEBRTC FIXED)
+// 📞 VIDEO CALL FIXED
 async function call() {
 
   pc = new RTCPeerConnection({
@@ -107,13 +79,13 @@ async function call() {
 
   document.getElementById("local").srcObject = stream;
 
-  stream.getTracks().forEach(track => pc.addTrack(track, stream));
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
-  pc.ontrack = (e) => {
+  pc.ontrack = e => {
     document.getElementById("remote").srcObject = e.streams[0];
   };
 
-  pc.onicecandidate = (e) => {
+  pc.onicecandidate = e => {
     if (e.candidate) socket.emit("ice", e.candidate);
   };
 
@@ -124,13 +96,13 @@ async function call() {
 }
 
 // RECEIVE CALL
-socket.on("offer", async (offer) => {
+socket.on("offer", async offer => {
 
   pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
 
-  pc.ontrack = (e) => {
+  pc.ontrack = e => {
     document.getElementById("remote").srcObject = e.streams[0];
   };
 
@@ -141,22 +113,10 @@ socket.on("offer", async (offer) => {
 
   socket.emit("answer", ans);
 
-  pc.onicecandidate = (e) => {
+  pc.onicecandidate = e => {
     if (e.candidate) socket.emit("ice", e.candidate);
   };
 });
 
-socket.on("answer", (ans) => pc.setRemoteDescription(ans));
-socket.on("ice", (c) => pc.addIceCandidate(c));
-
-// TYPING
-function typing() {
-  socket.emit("typing");
-}
-
-socket.on("typing", (name) => {
-  document.getElementById("typing").innerText = name + " typing...";
-  setTimeout(() => {
-    document.getElementById("typing").innerText = "";
-  }, 1000);
-});
+socket.on("answer", ans => pc.setRemoteDescription(ans));
+socket.on("ice", c => pc.addIceCandidate(c));
