@@ -30,17 +30,19 @@ io.on("connection", (socket) => {
     io.to(room).emit("system", name + " joined");
   });
 
-  // MESSAGE
-  socket.on("msg", (msg) => {
+  socket.on("msg", (data) => {
     io.to(socket.room).emit("msg", {
       name: socket.name,
-      msg
+      msg: data
     });
   });
 
-  // FILE
   socket.on("file", (d) => {
-    io.to(socket.room).emit("file", d);
+    io.to(socket.room).emit("file", {
+      name: socket.name,
+      file: d.file,
+      type: d.type
+    });
   });
 
   // CALL SIGNALING
@@ -57,4 +59,4 @@ io.on("connection", (socket) => {
 
 });
 
-http.listen(10000);
+http.listen(10000, () => console.log("running"));
