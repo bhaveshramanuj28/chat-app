@@ -27,7 +27,6 @@ io.on("connection", (socket) => {
     socket.room = room;
 
     rooms[room].push(socket.id);
-
     socket.join(room);
 
     cb({ ok: true });
@@ -35,20 +34,33 @@ io.on("connection", (socket) => {
     io.to(room).emit("system", `${name} joined`);
   });
 
-  // TEXT MESSAGE
+  // TEXT
   socket.on("msg", (d) => {
-    if (!socket.room) return;
 
-    io.to(socket.room).emit("msg", {
+    const message = {
+      id: Date.now(),
       name: socket.name,
       msg: d.msg
-    });
+    };
+
+    io.to(socket.room).emit("msg", message);
+
+    // delivered tick
+    socket.to(socket.room).emit("delivered", message.id);
   });
 
-  // FILE / IMAGE / AUDIO
-  socket.on("file", (d) => {
-    if (!socket.room) return;
+  // READ TICK
+  socket.on("read", (id) => {
+    socket.to(socket.room).emit("read", id);
+  });
 
+  // TYPING
+  socket.on("typing", () => {
+    socket.to(socket.room).emit("typing", socket.name);
+  });
+
+  // FILE
+  socket.on("file", (d) => {
     io.to(socket.room).emit("file", {
       name: socket.name,
       file: d.file,
@@ -56,12 +68,11 @@ io.on("connection", (socket) => {
     });
   });
 
-  // CALL SIGNALING
+  // CALL
   socket.on("offer", d => socket.to(d.room).emit("offer", d.offer));
   socket.on("answer", d => socket.to(d.room).emit("answer", d.answer));
   socket.on("ice", d => socket.to(d.room).emit("ice", d.candidate));
 
-  // CLEANUP
   socket.on("disconnect", () => {
     for (let r in rooms) {
       rooms[r] = rooms[r].filter(id => id !== socket.id);
@@ -71,4 +82,4 @@ io.on("connection", (socket) => {
 
 });
 
-http.listen(10000, () => console.log("WhatsApp v6 running"));
+http.listen(10000, () => console.log("WhatsApp v7 running"));
