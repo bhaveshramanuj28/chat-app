@@ -36,31 +36,18 @@ io.on("connection", (socket) => {
 
   // TEXT
   socket.on("msg", (d) => {
+    if (!socket.room) return;
 
-    const message = {
-      id: Date.now(),
+    io.to(socket.room).emit("msg", {
       name: socket.name,
       msg: d.msg
-    };
-
-    io.to(socket.room).emit("msg", message);
-
-    // delivered tick
-    socket.to(socket.room).emit("delivered", message.id);
+    });
   });
 
-  // READ TICK
-  socket.on("read", (id) => {
-    socket.to(socket.room).emit("read", id);
-  });
-
-  // TYPING
-  socket.on("typing", () => {
-    socket.to(socket.room).emit("typing", socket.name);
-  });
-
-  // FILE
+  // FILE / IMAGE / AUDIO
   socket.on("file", (d) => {
+    if (!socket.room) return;
+
     io.to(socket.room).emit("file", {
       name: socket.name,
       file: d.file,
@@ -68,7 +55,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  // CALL
+  // CALL SIGNALING
   socket.on("offer", d => socket.to(d.room).emit("offer", d.offer));
   socket.on("answer", d => socket.to(d.room).emit("answer", d.answer));
   socket.on("ice", d => socket.to(d.room).emit("ice", d.candidate));
@@ -82,4 +69,4 @@ io.on("connection", (socket) => {
 
 });
 
-http.listen(10000, () => console.log("WhatsApp v7 running"));
+http.listen(10000, () => console.log("Server running on 10000"));
