@@ -11,11 +11,7 @@ io.on("connection", (socket) => {
 
   socket.on("join", (data, cb) => {
 
-    const { name, room } = data || {};
-
-    if (!name || !room) {
-      return cb({ ok: false, error: "Invalid data" });
-    }
+    const { name, room } = data;
 
     if (!rooms[room]) rooms[room] = [];
 
@@ -31,42 +27,46 @@ io.on("connection", (socket) => {
 
     cb({ ok: true });
 
-    io.to(room).emit("system", `${name} joined`);
+    io.to(room).emit("system", name + " joined");
   });
 
-  // TEXT
+  // MESSAGE
   socket.on("msg", (d) => {
-    if (!socket.room) return;
 
-    io.to(socket.room).emit("msg", {
+    let message = {
+      id: Date.now(),
       name: socket.name,
-      msg: d.msg
-    });
+      msg: d.msg,
+      reply: d.reply || null
+    };
+
+    io.to(socket.room).emit("msg", message);
+
+    socket.to(socket.room).emit("delivered", message.id);
   });
 
-  // FILE / IMAGE / AUDIO
-  socket.on("file", (d) => {
-    if (!socket.room) return;
-
-    io.to(socket.room).emit("file", {
-      name: socket.name,
-      file: d.file,
-      type: d.type
-    });
+  // READ
+  socket.on("read", id => {
+    socket.to(socket.room).emit("read", id);
   });
 
-  // CALL SIGNALING
-  socket.on("offer", d => socket.to(d.room).emit("offer", d.offer));
-  socket.on("answer", d => socket.to(d.room).emit("answer", d.answer));
-  socket.on("ice", d => socket.to(d.room).emit("ice", d.candidate));
+  // DELETE
+  socket.on("delete", id => {
+    io.to(socket.room).emit("delete", id);
+  });
+
+  // FILE
+  socket.on("file", d => {
+    io.to(socket.room).emit("file", d);
+  });
 
   socket.on("disconnect", () => {
     for (let r in rooms) {
       rooms[r] = rooms[r].filter(id => id !== socket.id);
-      if (rooms[r].length === 0) delete rooms[r];
+      if (!rooms[r].length) delete rooms[r];
     }
   });
 
 });
 
-http.listen(10000, () => console.log("Server running on 10000"));
+http.listen(10000);
